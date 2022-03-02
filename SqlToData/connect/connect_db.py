@@ -19,6 +19,19 @@ try:
             return str(moji)
 
 
+    title = """
+    ----------------------------------------------------------
+    実績データ変更プログラム ver 0.0.2
+    【変更点】
+    金山　加硫実績の集計表示の変更依頼があったので別シートにて
+    集計結果を表示するようにしました。
+    （現時点では処理日から2ヶ月前までのデータが出力されます）
+    ----------------------------------------------------------
+    
+    
+    """
+    print(title)
+
     print('化工品_加硫実績を出力します')
     wb = Excel.Workbook()
     ws = wb.active
@@ -86,7 +99,7 @@ try:
             ws['Z' + stri] = row['GM4']
             ws['AA' + stri] = row['SYORIBI']
             i += 1
-    print(str(i - 1) + '件 データ出力中しました')
+    print(str(i - 1) + '件 データ出力しました')
 
     print('検査実績を出力します')
     ws2 = wb.create_sheet(title='検査実績')
@@ -154,7 +167,7 @@ try:
             ws2['Q' + stri] = str(row['E_H_TIME']) + ':' + str(row['E_M_TIME'])
             ws2['R' + stri] = row['INPUT']
             i += 1
-    print(str(i - 1) + '件 データ出力中しました')
+    print(str(i - 1) + '件 データ出力しました')
 
     print('防振_加硫実績を出力します')
     ws3 = wb.create_sheet(title='防振_加硫実績')
@@ -284,7 +297,7 @@ try:
             ws3['AO' + stri] = row['TEISI_JIKAN4']
             ws3['AP' + stri] = row['SYORIBI']
             i += 1
-    print(str(i - 1) + '件 データ出力中しました')
+    print(str(i - 1) + '件 データ出力しました')
 
     print('仕入_不良を出力します')
     ws4 = wb.create_sheet(title='仕入_不良')
@@ -344,7 +357,73 @@ try:
             ws4['W' + stri] = str(row['SYORIBI'])[0:10]
             ws4['X' + stri] = row['YUUKOU']
             i += 1
-    print(str(i - 1) + '件 データ出力中しました')
+    print(str(i - 1) + '件 データ出力しました')
+
+    print('金山防振_加硫実績を出力します')
+    ws4 = wb.create_sheet(title='金山防振_加硫実績')
+    with connection.cursor() as cursor:
+        sql = "SELECT *,mns.SEITNK " \
+              "FROM karyu_keikaku.df_karyujisseki dk " \
+              "LEFT JOIN sahashinewsystem.mf_new_seihintanka mns on dk.SEIBAN=mns.SEIBAN " \
+              "WHERE KARYU_BUSYO=2000 and KARYU_BI >=now()-interval 2 month " \
+              "order by dk.KARYU_BI,dk.SEIBAN asc,dk.SETUBI_CODE asc,dk.GOUKI_CODE asc"
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        ws4['A1'] = '製番'
+        ws4['B1'] = '設備コード'
+        ws4['C1'] = '号機コード'
+        ws4['D1'] = '加硫日'
+        ws4['E1'] = '不良コード'
+        ws4['F1'] = '不良名'
+        ws4['G1'] = '不良数'
+        ws4['H1'] = '生産数'
+        ws4['I1'] = '単価'
+        ws4['J1'] = '金額'
+        i = 2
+        for row in result:
+            stri = str(i)
+            ws4['A' + stri] = row['SEIBAN']
+            ws4['B' + stri] = row['SETUBI_CODE']
+            ws4['C' + stri] = row['GOUKI_CODE']
+            ws4['D' + stri] = row['KARYU_BI']
+            ws4['E' + stri] = row['HURYO_CODE1']
+            sql2 = "SELECT HURYO_NAME FROM sahashinewsystem.mf_huryocode WHERE CD = %s"
+            cursor.execute(sql2, row['HURYO_CODE1'])
+            result2 = cursor.fetchone()
+            if result2 != None:
+                ws4['F' + stri] = result2['HURYO_NAME']
+            else:
+                ws4['F' + stri] = '-'
+            ws4['G' + stri] = row['HURYO_SU1']
+            ws4['H' + stri] = row['SEISAN_SU']
+            ws4['I' + stri] = row['SEITNK']
+            ws4['J' + stri] = round(row['HURYO_SU1'] * row['SEITNK'])
+            i += 1
+            for j in range(2, 5):
+                stri = str(i)
+                strj = str(j)
+                if row['HURYO_CODE' + strj] != 0:
+                    ws4['A' + stri] = row['SEIBAN']
+                    ws4['B' + stri] = row['SETUBI_CODE']
+                    ws4['C' + stri] = row['GOUKI_CODE']
+                    ws4['D' + stri] = row['KARYU_BI']
+                    ws4['E' + stri] = row['HURYO_CODE' + strj]
+                    sql2 = "SELECT HURYO_NAME FROM sahashinewsystem.mf_huryocode WHERE CD = %s"
+                    key = row['HURYO_CODE' + strj]
+                    cursor.execute(sql2, key)
+                    result2 = cursor.fetchone()
+                    if result2 != None:
+                        ws4['F' + stri] = result2['HURYO_NAME']
+                    else:
+                        ws4['F' + stri] = '-'
+                    ws4['G' + stri] = row['HURYO_SU' + strj]
+                    ws4['H' + stri] = 0
+                    ws4['I' + stri] = row['SEITNK']
+                    ws4['J' + stri] = round(row['HURYO_SU' + strj] * row['SEITNK'])
+                    i += 1
+                    j += j
+
+    print(str(i - 1) + '件 データ出力しました')
 
     wb.save('karyu_kensa_jisseki.xlsx')
     connection.commit()
