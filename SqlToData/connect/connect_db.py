@@ -6,6 +6,7 @@
 
 import pymysql.cursors
 import openpyxl as Excel
+import termcolor
 
 connection = pymysql.connect(host='192.168.3.203', user='kudo', password='1111',
                              db='sahashinewsystem', charset='utf8mb4',
@@ -25,12 +26,21 @@ try:
     【変更点】
     金山　加硫実績の集計表示の変更依頼があったので別シートにて
     集計結果を表示するようにしました。
-    （現時点では処理日から2ヶ月前までのデータが出力されます）
+    日付を指定して出力できるようにしました。
     ----------------------------------------------------------
-    
-    
     """
     print(title)
+
+    caution_message="""
+    karyu_kensa_jisseki.xlsxファイルが開いているとエラーになります
+    
+    """
+    print(caution_message)
+
+    print('出力対象年月日を入力してください')
+    print('例：2022-01-01')
+    startYMD = input('対象開始日：')
+    endYMD = input('対象終了日:')
 
     print('化工品_加硫実績を出力します')
     wb = Excel.Workbook()
@@ -38,8 +48,8 @@ try:
     ws.title = '化工品_加硫実績'
 
     with connection.cursor() as cursor:
-        sql = "SELECT * FROM kakouhin.df_karyujisseki"
-        cursor.execute(sql)
+        sql = "SELECT * FROM kakouhin.df_karyujisseki where KARYUBI between %s and %s"
+        cursor.execute(sql, (startYMD, endYMD))
         result = cursor.fetchall()
         ws['A1'] = 'ID'
         ws['B1'] = '加硫日'
@@ -99,13 +109,13 @@ try:
             ws['Z' + stri] = row['GM4']
             ws['AA' + stri] = row['SYORIBI']
             i += 1
-    print(str(i - 1) + '件 データ出力しました')
+    print(str(i - 2) + '件 データ出力しました\n')
 
     print('検査実績を出力します')
     ws2 = wb.create_sheet(title='検査実績')
     with connection.cursor() as cursor:
-        sql = "SELECT * FROM kakouhin.df_kakou_kensa"
-        cursor.execute(sql)
+        sql = "SELECT * FROM kakouhin.df_kakou_kensa where SAGYOUBI between %s and %s"
+        cursor.execute(sql, (startYMD, endYMD))
         result = cursor.fetchall()
         ws2['A1'] = 'ID'
         ws2['B1'] = '検査部署'
@@ -167,13 +177,13 @@ try:
             ws2['Q' + stri] = str(row['E_H_TIME']) + ':' + str(row['E_M_TIME'])
             ws2['R' + stri] = row['INPUT']
             i += 1
-    print(str(i - 1) + '件 データ出力しました')
+    print(str(i - 2) + '件 データ出力しました\n')
 
     print('防振_加硫実績を出力します')
     ws3 = wb.create_sheet(title='防振_加硫実績')
     with connection.cursor() as cursor:
-        sql = "SELECT * FROM karyu_keikaku.df_karyujisseki"
-        cursor.execute(sql)
+        sql = "SELECT * FROM karyu_keikaku.df_karyujisseki where KARYU_BI between %s and %s"
+        cursor.execute(sql, (startYMD, endYMD))
         result = cursor.fetchall()
         ws3['A1'] = 'ID'
         ws3['B1'] = '加硫日'
@@ -297,13 +307,13 @@ try:
             ws3['AO' + stri] = row['TEISI_JIKAN4']
             ws3['AP' + stri] = row['SYORIBI']
             i += 1
-    print(str(i - 1) + '件 データ出力しました')
+    print(str(i - 2) + '件 データ出力しました\n')
 
     print('仕入_不良を出力します')
     ws4 = wb.create_sheet(title='仕入_不良')
     with connection.cursor() as cursor:
-        sql = "SELECT * FROM sahashinewsystem.df_siirejisseki_kensa"
-        cursor.execute(sql)
+        sql = "SELECT * FROM sahashinewsystem.df_siirejisseki_kensa where left(KENSA_BI,10) between %s and %s"
+        cursor.execute(sql, (startYMD, endYMD))
         result = cursor.fetchall()
         ws4['A1'] = 'ID'
         ws4['B1'] = '検査日'
@@ -357,7 +367,7 @@ try:
             ws4['W' + stri] = str(row['SYORIBI'])[0:10]
             ws4['X' + stri] = row['YUUKOU']
             i += 1
-    print(str(i - 1) + '件 データ出力しました')
+    print(str(i - 2) + '件 データ出力しました\n')
 
     print('金山防振_加硫実績を出力します')
     ws4 = wb.create_sheet(title='金山防振_加硫実績')
@@ -365,9 +375,9 @@ try:
         sql = "SELECT *,mns.SEITNK " \
               "FROM karyu_keikaku.df_karyujisseki dk " \
               "LEFT JOIN sahashinewsystem.mf_new_seihintanka mns on dk.SEIBAN=mns.SEIBAN " \
-              "WHERE KARYU_BUSYO=2000 and KARYU_BI >=now()-interval 2 month " \
+              "WHERE KARYU_BUSYO=2000 and KARYU_BI between %s and %s " \
               "order by dk.KARYU_BI,dk.SEIBAN asc,dk.SETUBI_CODE asc,dk.GOUKI_CODE asc"
-        cursor.execute(sql)
+        cursor.execute(sql, (startYMD, endYMD))
         result = cursor.fetchall()
         ws4['A1'] = '製番'
         ws4['B1'] = '設備コード'
@@ -376,9 +386,11 @@ try:
         ws4['E1'] = '不良コード'
         ws4['F1'] = '不良名'
         ws4['G1'] = '不良数'
-        ws4['H1'] = '生産数'
-        ws4['I1'] = '単価'
+        ws4['H1'] = '不良金額'
+        ws4['I1'] = '生産数'
         ws4['J1'] = '金額'
+        ws4['K1'] = '単価'
+
         i = 2
         for row in result:
             stri = str(i)
@@ -395,9 +407,10 @@ try:
             else:
                 ws4['F' + stri] = '-'
             ws4['G' + stri] = row['HURYO_SU1']
-            ws4['H' + stri] = row['SEISAN_SU']
-            ws4['I' + stri] = row['SEITNK']
-            ws4['J' + stri] = round(row['HURYO_SU1'] * row['SEITNK'])
+            ws4['H' + stri] = round(row['HURYO_SU1'] * row['SEITNK'])
+            ws4['I' + stri] = row['SEISAN_SU']
+            ws4['J' + stri] = round(row['SEISAN_SU'] * row['SEITNK'])
+            ws4['K' + stri] = row['SEITNK']
             i += 1
             for j in range(2, 5):
                 stri = str(i)
@@ -417,13 +430,13 @@ try:
                     else:
                         ws4['F' + stri] = '-'
                     ws4['G' + stri] = row['HURYO_SU' + strj]
-                    ws4['H' + stri] = 0
-                    ws4['I' + stri] = row['SEITNK']
-                    ws4['J' + stri] = round(row['HURYO_SU' + strj] * row['SEITNK'])
+                    ws4['H' + stri] = round(row['HURYO_SU' + strj] * row['SEITNK'])
+                    ws4['I' + stri] = 0
+                    ws4['J' + stri] = 0
+                    ws4['K' + stri] = row['SEITNK']
                     i += 1
                     j += j
-
-    print(str(i - 1) + '件 データ出力しました')
+    print(str(i - 2) + '件 データ出力しました\n')
 
     wb.save('karyu_kensa_jisseki.xlsx')
     connection.commit()
