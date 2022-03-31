@@ -372,12 +372,21 @@ try:
     print('金山防振_加硫実績を出力します')
     ws4 = wb.create_sheet(title='金山防振_加硫実績')
     with connection.cursor() as cursor:
-        sql = "SELECT *,mns.SEITNK " \
+        sql = "SELECT dk.SEIBAN,SETUBI_CODE,GOUKI_CODE,KARYU_BI," \
+              "HURYO_CODE1,HURYO_SU1,HURYO_CODE2,HURYO_SU2,HURYO_CODE3,HURYO_SU3," \
+              "HURYO_CODE4,HURYO_SU4,HURYO_CODE5,HURYO_SU5,SEISAN_SU,mns.SEITNK " \
               "FROM karyu_keikaku.df_karyujisseki dk " \
               "LEFT JOIN sahashinewsystem.mf_new_seihintanka mns on dk.SEIBAN=mns.SEIBAN " \
               "WHERE KARYU_BUSYO=2000 and KARYU_BI between %s and %s " \
-              "order by dk.KARYU_BI,dk.SEIBAN asc,dk.SETUBI_CODE asc,dk.GOUKI_CODE asc"
-        cursor.execute(sql, (startYMD, endYMD))
+              "UNION ALL " \
+              "SELECT dk2.SEIBAN,'','検査',SAGYOBI," \
+              "HURYOCODE1,HURYOSU1,HURYOCODE2,HURYOSU2,HURYOCODE3,HURYOSU3," \
+              "HURYOCODE4,HURYOSU4,HURYOCODE5,HURYOSU5,0,mns2.SEITNK " \
+              "FROM kensa_jisseki.df_kensajisseki dk2 " \
+              "LEFT JOIN sahashinewsystem.mf_new_seihintanka mns2 on dk2.SEIBAN=mns2.SEIBAN " \
+              "WHERE BUSYO LIKE %s AND SAGYOBI BETWEEN %s AND %s " \
+              "order by KARYU_BI,SEIBAN asc,SETUBI_CODE asc,GOUKI_CODE asc"
+        cursor.execute(sql, (startYMD, endYMD, '20%', startYMD, endYMD))
         result = cursor.fetchall()
         ws4['A1'] = '製番'
         ws4['B1'] = '設備コード'
