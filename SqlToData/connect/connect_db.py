@@ -6,7 +6,7 @@
 
 import pymysql.cursors
 import openpyxl as Excel
-import termcolor
+from tqdm import tqdm
 
 connection = pymysql.connect(host='192.168.3.203', user='kudo', password='1111',
                              db='sahashinewsystem', charset='utf8mb4',
@@ -22,11 +22,10 @@ try:
 
     title = """
     ----------------------------------------------------------
-    実績データ変更プログラム ver 0.0.2
+    実績データ変更プログラム ver 1.0.0
     【変更点】
-    金山　加硫実績の集計表示の変更依頼があったので別シートにて
-    集計結果を表示するようにしました。
-    日付を指定して出力できるようにしました。
+    金山の加硫実績と検査実績を統合するようにしました。
+    変換の進捗管理を見える化しました。
     ----------------------------------------------------------
     """
     print(title)
@@ -79,7 +78,7 @@ try:
         ws['Z1'] = 'ゴム配合4'
         ws['AA1'] = '処理日'
         i = 2
-        for row in result:
+        for row in tqdm(result):
             stri = str(i)
             ws['A' + stri] = row['ID']
             ws['B' + stri] = row['KARYUBI']
@@ -136,7 +135,7 @@ try:
         ws2['Q1'] = '作業終了時間'
         ws2['R1'] = '入力日'
         i = 2
-        for row in result:
+        for row in tqdm(result):
             stri = str(i)
             ws2['A' + stri] = row['ID']
             ws2['B' + stri] = row['KENSABUSYO']
@@ -228,7 +227,7 @@ try:
         ws3['AO1'] = '停止時間（分）'
         ws3['AP1'] = '処理日'
         i = 2
-        for row in result:
+        for row in tqdm(result):
             stri = str(i)
             ws3['A' + stri] = row['ID']
             ws3['B' + stri] = row['KARYU_BI']
@@ -340,7 +339,7 @@ try:
         ws4['W1'] = '処理日'
         ws4['X1'] = '有効'
         i = 2
-        for row in result:
+        for row in tqdm(result):
             stri = str(i)
             ws4['A' + stri] = row['SIIRE_ID']
             ws4['B' + stri] = str(row['KENSA_BI'])[0:10]
@@ -369,8 +368,8 @@ try:
             i += 1
     print(str(i - 2) + '件 データ出力しました\n')
 
-    print('金山防振_加硫実績を出力します')
-    ws4 = wb.create_sheet(title='金山防振_加硫実績')
+    print('金山防振_加硫検査実績を出力します')
+    ws4 = wb.create_sheet(title='金山防振_加硫検査実績')
     with connection.cursor() as cursor:
         sql = "SELECT dk.SEIBAN,SETUBI_CODE,GOUKI_CODE,KARYU_BI," \
               "HURYO_CODE1,HURYO_SU1,HURYO_CODE2,HURYO_SU2,HURYO_CODE3,HURYO_SU3," \
@@ -389,19 +388,19 @@ try:
         cursor.execute(sql, (startYMD, endYMD, '20%', startYMD, endYMD))
         result = cursor.fetchall()
         ws4['A1'] = '製番'
-        ws4['B1'] = '設備コード'
-        ws4['C1'] = '号機コード'
+        ws4['B1'] = '設備'
+        ws4['C1'] = '号機'
         ws4['D1'] = '加硫日'
         ws4['E1'] = '不良コード'
         ws4['F1'] = '不良名'
         ws4['G1'] = '不良数'
         ws4['H1'] = '不良金額'
         ws4['I1'] = '生産数'
-        ws4['J1'] = '金額'
+        ws4['J1'] = '生産金額'
         ws4['K1'] = '単価'
 
         i = 2
-        for row in result:
+        for row in tqdm(result):
             stri = str(i)
             if row['SEITNK'] == None:
                 row['SEITNK'] = 0
@@ -446,106 +445,6 @@ try:
                     ws4['I' + stri] = 0
                     ws4['J' + stri] = 0
                     ws4['K' + stri] = row['SEITNK']
-                    i += 1
-                    j += j
-    print(str(i - 2) + '件 データ出力しました\n')
-
-    print('金山検査実績を出力します')
-    ws5 = wb.create_sheet(title='金山検査実績')
-    with connection.cursor() as cursor:
-        sql = "SELECT *,mns.SEITNK " \
-              "FROM kensa_jisseki.df_kensajisseki DK " \
-              "LEFT JOIN sahashinewsystem.mf_new_seihintanka mns on dk.SEIBAN = mns.SEIBAN " \
-              "WHERE BUSYO like %s and SAGYOBI between %s and %s " \
-              "order by dk.SAGYOBI,dk.SEIBAN asc"
-        cursor.execute(sql, ('20%', startYMD, endYMD))
-        result = cursor.fetchall()
-        ws5['A1'] = '製番'
-        ws5['B1'] = '機種'
-        ws5['C1'] = '号機'
-        ws5['D1'] = '直'
-        ws5['E1'] = '年月日'
-        ws5['F1'] = '不良名'
-        ws5['G1'] = '不良コード'
-        ws5['H1'] = '不良数'
-        ws5['I1'] = '加硫数'
-        ws5['J1'] = '単価'
-        ws5['K1'] = '金額'
-        ws5['L1'] = '検査'
-        ws5['M1'] = '部署'
-        ws5['N1'] = '検査数'
-        ws5['O1'] = '加硫'
-        ws5['P1'] = '部署'
-        ws5['Q1'] = '処理日'
-
-        i = 2
-        for row in result:
-            stri = str(i)
-            if row['SEITNK'] == None:
-                row['SEITNK'] = 0
-
-            ws5['A' + stri] = row['SEIBAN']
-            ws5['B' + stri] = ""
-            ws5['C' + stri] = "検査"
-            ws5['D' + stri] = ""
-            ws5['E' + stri] = row['SAGYOBI']
-            sql2 = "SELECT HURYO_NAME FROM sahashinewsystem.mf_huryocode WHERE CD = %s"
-            cursor.execute(sql2, row['HURYOCODE1'])
-            result2 = cursor.fetchone()
-            if result2 != None:
-                ws5['F' + stri] = result2['HURYO_NAME']
-            else:
-                ws5['F' + stri] = '-'
-            ws5['G' + stri] = row['HURYOCODE1']
-            ws5['H' + stri] = row['HURYOSU1']
-            ws5['I' + stri] = row['SAGYOKOSU']
-            ws5['J' + stri] = row['SEITNK']
-            ws5['K' + stri] = round(row['HURYOSU1'] * row['SEITNK'])
-            ws5['L' + stri] = row['BUSYO']
-            if (ws5['L' + stri] == 2000):
-                ws5['M' + stri] = '金山'
-                ws5['O' + stri] = 2
-                ws5['P' + stri] = '金山'
-            else:
-                ws5['M' + stri] = '小牧'
-                ws5['O' + stri] = 1
-                ws5['P' + stri] = '小牧'
-            ws5['N' + stri] = row['SAGYOKOSU']
-            ws5['Q' + stri] = row['REG_DATE']
-            i += 1
-            for j in range(2, 5):
-                stri = str(i)
-                strj = str(j)
-                if row['HURYOCODE' + strj] != 0:
-                    ws5['A' + stri] = row['SEIBAN']
-                    ws5['B' + stri] = ""
-                    ws5['C' + stri] = "検査"
-                    ws5['D' + stri] = ""
-                    ws5['E' + stri] = row['SAGYOBI']
-                    sql2 = "SELECT HURYO_NAME FROM sahashinewsystem.mf_huryocode WHERE CD = %s"
-                    key = row['HURYOCODE' + strj]
-                    cursor.execute(sql2, key)
-                    result2 = cursor.fetchone()
-                    if result2 != None:
-                        ws5['F' + stri] = result2['HURYO_NAME']
-                    else:
-                        ws5['F' + stri] = '-'
-                    ws5['G' + stri] = row['HURYOCODE' + strj]
-                    ws5['H' + stri] = row['HURYOSU' + strj]
-                    ws5['I' + stri] = row['SAGYOKOSU']
-                    ws5['J' + stri] = row['SEITNK']
-                    ws5['K' + stri] = round(row['HURYOSU' + strj] * row['SEITNK'])
-                    ws5['L' + stri] = row['BUSYO']
-                    if (ws5['L' + stri] == 2000):
-                        ws5['M' + stri] = '金山'
-                        ws5['O' + stri] = 2
-                        ws5['P' + stri] = '金山'
-                    else:
-                        ws5['M' + stri] = '小牧'
-                        ws5['O' + stri] = 1
-                        ws5['P' + stri] = '小牧'
-                    ws5['N' + stri] = row['SAGYOKOSU']
-                    ws5['Q' + stri] = row['REG_DATE']
                     i += 1
                     j += j
     print(str(i - 2) + '件 データ出力しました\n')
