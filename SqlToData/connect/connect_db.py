@@ -311,7 +311,7 @@ try:
     print('仕入_不良を出力します')
     ws4 = wb.create_sheet(title='仕入_不良')
     with connection.cursor() as cursor:
-        sql = "SELECT * FROM sahashinewsystem.df_siirejisseki_kensa where left(KENSA_BI,10) between %s and %s"
+        sql = "SELECT * FROM sahashinewsystem.df_siirejisseki_kensa where left(NOUHIN_BI,10) between %s and %s"
         cursor.execute(sql, (startYMD, endYMD))
         result = cursor.fetchall()
         ws4['A1'] = 'ID'
