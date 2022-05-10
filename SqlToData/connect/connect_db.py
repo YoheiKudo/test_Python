@@ -110,8 +110,8 @@ try:
             i += 1
     print(str(i - 2) + '件 データ出力しました\n')
 
-    print('検査実績を出力します')
-    ws2 = wb.create_sheet(title='検査実績')
+    print('検査実績(1)を出力します')
+    ws2 = wb.create_sheet(title='検査実績（1）')
     with connection.cursor() as cursor:
         sql = "SELECT * FROM kakouhin.df_kakou_kensa where SAGYOUBI between %s and %s"
         cursor.execute(sql, (startYMD, endYMD))
@@ -175,6 +175,76 @@ try:
             ws2['P' + stri] = str(row['S_H_TIME']) + ':' + str(row['S_M_TIME'])
             ws2['Q' + stri] = str(row['E_H_TIME']) + ':' + str(row['E_M_TIME'])
             ws2['R' + stri] = row['INPUT']
+            i += 1
+    print(str(i - 2) + '件 データ出力しました\n')
+
+    print('検査実績(2)を出力します')
+    ws21 = wb.create_sheet(title='検査実績(2)')
+    with connection.cursor() as cursor:
+        sql = "SELECT ID,BUSYO, SAGYOBI,SEIBAN,SAGYOKOSU, HURYOCODE1, HURYOSU1, HURYOCODE2, HURYOSU2, HURYOCODE3," \
+              " HURYOSU3, HURYOCODE4, HURYOSU4, HURYOCODE5, HURYOSU5, HURYOSU, KADOUSH, KADOUSM, KADOUEH, KADOUEM, " \
+              "KADOUJIKAN, REG_DATE  FROM kensa_jisseki.df_kensajisseki where SAGYOBI between %s and %s"
+        cursor.execute(sql, (startYMD, endYMD))
+        result = cursor.fetchall()
+        ws21['A1'] = 'ID'
+        ws21['B1'] = '検査部署'
+        ws21['C1'] = '作業日'
+        ws21['D1'] = '製番'
+        ws21['E1'] = '個数'
+        ws21['F1'] = '不良コード1'
+        ws21['G1'] = '不良数1'
+        ws21['H1'] = '不良コード2'
+        ws21['I1'] = '不良数2'
+        ws21['J1'] = '不良コード3'
+        ws21['K1'] = '不良数3'
+        ws21['L1'] = '不良コード4'
+        ws21['M1'] = '不良数4'
+        ws21['N1'] = '不良コード5'
+        ws21['O1'] = '不良数5'
+        ws21['P1'] = '作業開始時間'
+        ws21['Q1'] = '作業終了時間'
+        ws21['R1'] = '入力日'
+        i = 2
+        for row in tqdm(result):
+            stri = str(i)
+            ws21['A' + stri] = row['ID']
+            ws21['B' + stri] = row['BUSYO']
+            ws21['C' + stri] = row['SAGYOBI']
+            ws21['D' + stri] = row['SEIBAN']
+            ws21['E' + stri] = row['SAGYOKOSU']
+            ws21['F' + stri] = row['HURYOCODE1']
+            ws21['G' + stri] = row['HURYOSU1']
+            ws21['H' + stri] = row['HURYOCODE2']
+            ws21['I' + stri] = row['HURYOSU2']
+            ws21['J' + stri] = row['HURYOCODE3']
+            ws21['K' + stri] = row['HURYOSU3']
+            ws21['L' + stri] = row['HURYOCODE4']
+            ws21['M' + stri] = row['HURYOSU4']
+            ws21['N' + stri] = row['HURYOCODE5']
+            ws21['O' + stri] = row['HURYOSU5']
+            if len(str(row['KADOUSH'])) == 1:
+                row['KADOUSH'] = '0' + str(row['KADOUSH'])
+            else:
+                row['KADOUSH'] = str(row['KADOUSH'])
+
+            if len(str(row['KADOUSM'])) == 1:
+                row['KADOUSM'] = '0' + str(row['KADOUSM'])
+            else:
+                row['KADOUSM'] = str(row['KADOUSM'])
+
+            if len(str(row['KADOUEH'])) == 1:
+                row['KADOUEH'] = '0' + str(row['KADOUEH'])
+            else:
+                row['KADOUEH'] = str(row['KADOUEH'])
+
+            if len(str(row['KADOUEM'])) == 1:
+                row['KADOUEM'] = '0' + str(row['KADOUEM'])
+            else:
+                row['KADOUEM'] = str(row['KADOUEM'])
+
+            ws21['P' + stri] = str(row['KADOUSH']) + ':' + str(row['KADOUSM'])
+            ws21['Q' + stri] = str(row['KADOUEH']) + ':' + str(row['KADOUEM'])
+            ws21['R' + stri] = row['REG_DATE']
             i += 1
     print(str(i - 2) + '件 データ出力しました\n')
 
@@ -416,7 +486,7 @@ try:
             if result2 != None:
                 ws4['F' + stri] = result2['HURYO_NAME']
             else:
-                ws4['F' + stri] = '-'
+                ws4['F' + stri] = ''
             ws4['G' + stri] = row['HURYO_SU1']
             ws4['H' + stri] = round(row['HURYO_SU1'] * row['SEITNK'])
             ws4['I' + stri] = row['SEISAN_SU']
@@ -439,7 +509,7 @@ try:
                     if result2 != None:
                         ws4['F' + stri] = result2['HURYO_NAME']
                     else:
-                        ws4['F' + stri] = '-'
+                        ws4['F' + stri] = ''
                     ws4['G' + stri] = row['HURYO_SU' + strj]
                     ws4['H' + stri] = round(row['HURYO_SU' + strj] * row['SEITNK'])
                     ws4['I' + stri] = 0
