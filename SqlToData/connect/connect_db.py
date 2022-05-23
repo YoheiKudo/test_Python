@@ -8,6 +8,24 @@ import pymysql.cursors
 import openpyxl as Excel
 from tqdm import tqdm
 
+
+def changesetubicode(sc):
+    if sc == '01':
+        return 'MTI'
+    elif sc == '11':
+        return 'SSI'
+    elif sc == '21':
+        return 'AIﾀﾃ'
+    elif sc == '31':
+        return 'AIﾖｺ'
+    elif sc == '51':
+        return 'LTI'
+    elif sc == '60':
+        return '特殊'
+    else:
+        return sc
+
+
 connection = pymysql.connect(host='192.168.3.203', user='kudo', password='1111',
                              db='sahashinewsystem', charset='utf8mb4',
                              cursorclass=pymysql.cursors.DictCursor)
@@ -22,10 +40,9 @@ try:
 
     title = """
     ----------------------------------------------------------
-    実績データ変更プログラム ver 1.0.0
+    実績データ変更プログラム ver 1.2.0
     【変更点】
-    金山の加硫実績と検査実績を統合するようにしました。
-    変換の進捗管理を見える化しました。
+    金山の加硫検査実績のレイアウトを変更しました
     ----------------------------------------------------------
     """
     print(title)
@@ -443,17 +460,19 @@ try:
     with connection.cursor() as cursor:
         sql = "SELECT dk.SEIBAN,SETUBI_CODE,GOUKI_CODE,KARYU_BI," \
               "HURYO_CODE1,HURYO_SU1,HURYO_CODE2,HURYO_SU2,HURYO_CODE3,HURYO_SU3," \
-              "HURYO_CODE4,HURYO_SU4,HURYO_CODE5,HURYO_SU5,SEISAN_SU,mns.SEITNK " \
+              "HURYO_CODE4,HURYO_SU4,HURYO_CODE5,HURYO_SU5,SEISAN_SU,mns.SEITNK,IFNULL(nmf.SEIBAN,'要確認') MF_SEIBAN " \
               "FROM karyu_keikaku.df_karyujisseki dk " \
               "LEFT JOIN sahashinewsystem.mf_new_seihintanka mns on dk.SEIBAN=mns.SEIBAN " \
+              "LEFT JOIN (select * from new_mf_fuka where HUKAHI>0) nmf ON dk.SEIBAN=nmf.SEIBAN " \
               "WHERE KARYU_BUSYO=2000 and KARYU_BI between %s and %s " \
               "UNION ALL " \
-              "SELECT dk2.SEIBAN,'','検査',SAGYOBI," \
+              "SELECT dk2.SEIBAN,nmf2.KISYU,'検査',SAGYOBI," \
               "HURYOCODE1,HURYOSU1,HURYOCODE2,HURYOSU2,HURYOCODE3,HURYOSU3," \
-              "HURYOCODE4,HURYOSU4,HURYOCODE5,HURYOSU5,0,mns2.SEITNK " \
+              "HURYOCODE4,HURYOSU4,HURYOCODE5,HURYOSU5,0,mns2.SEITNK,IFNULL(nmf2.SEIBAN,'要確認') MF_SEIBAN " \
               "FROM kensa_jisseki.df_kensajisseki dk2 " \
               "LEFT JOIN sahashinewsystem.mf_new_seihintanka mns2 on dk2.SEIBAN=mns2.SEIBAN " \
-              "WHERE BUSYO LIKE %s AND SAGYOBI BETWEEN %s AND %s " \
+              "LEFT JOIN (select * from new_mf_fuka where HUKAHI>0) nmf2 ON dk2.SEIBAN=nmf2.SEIBAN " \
+              "WHERE dk2.BUSYO LIKE %s AND SAGYOBI BETWEEN %s AND %s " \
               "order by KARYU_BI,SEIBAN asc,SETUBI_CODE asc,GOUKI_CODE asc"
         cursor.execute(sql, (startYMD, endYMD, '20%', startYMD, endYMD))
         result = cursor.fetchall()
@@ -468,6 +487,7 @@ try:
         ws4['I1'] = '生産数'
         ws4['J1'] = '生産金額'
         ws4['K1'] = '単価'
+        ws4['L1'] = '負荷マスター'
 
         i = 2
         for row in tqdm(result):
@@ -476,7 +496,7 @@ try:
                 row['SEITNK'] = 0
 
             ws4['A' + stri] = row['SEIBAN']
-            ws4['B' + stri] = row['SETUBI_CODE']
+            ws4['B' + stri] = changesetubicode(row['SETUBI_CODE'])
             ws4['C' + stri] = row['GOUKI_CODE']
             ws4['D' + stri] = row['KARYU_BI']
             ws4['E' + stri] = row['HURYO_CODE1']
@@ -492,13 +512,14 @@ try:
             ws4['I' + stri] = row['SEISAN_SU']
             ws4['J' + stri] = round(row['SEISAN_SU'] * row['SEITNK'])
             ws4['K' + stri] = row['SEITNK']
+            ws4['L' + stri] = row['MF_SEIBAN']
             i += 1
             for j in range(2, 5):
                 stri = str(i)
                 strj = str(j)
                 if row['HURYO_CODE' + strj] != 0:
                     ws4['A' + stri] = row['SEIBAN']
-                    ws4['B' + stri] = row['SETUBI_CODE']
+                    ws4['B' + stri] = changesetubicode(row['SETUBI_CODE'])
                     ws4['C' + stri] = row['GOUKI_CODE']
                     ws4['D' + stri] = row['KARYU_BI']
                     ws4['E' + stri] = row['HURYO_CODE' + strj]
@@ -515,6 +536,7 @@ try:
                     ws4['I' + stri] = 0
                     ws4['J' + stri] = 0
                     ws4['K' + stri] = row['SEITNK']
+                    ws4['L' + stri] = row['MF_SEIBAN']
                     i += 1
                     j += j
     print(str(i - 2) + '件 データ出力しました\n')
